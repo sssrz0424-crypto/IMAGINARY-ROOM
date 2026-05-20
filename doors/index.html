@@ -1,0 +1,535 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <title>Doors Depth Scene</title>
+  </head>
+  <body>
+    <main class="main-container">
+      <canvas id="app"></canvas>
+    </main>
+    <div
+      id="green-door-void-root"
+      class="green-door-void"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="green-door-void__void" aria-hidden="true"></div>
+      <div class="green-door-void__lines" aria-live="polite">
+        <div class="green-door-void__lines-inner"></div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="green-door-void-exit"
+      class="green-door-void-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="green-door-void-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="white-door-gallery-root"
+      class="white-door-gallery"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="white-door-gallery__backdrop" aria-hidden="true"></div>
+      <div class="white-door-gallery__stage">
+        <div class="wg-mosaic" id="wg-mosaic" aria-label="白门后画廊">
+          <div class="wg-cell wg-screen" style="grid-area: lv1">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-01.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: lv2">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-02.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: rv1">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-03.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: rv2">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-04.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: ht1">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-05.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: ht2">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-06.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-arm wg-arm--left" style="grid-area: arL">
+            <div class="wg-frame wg-frame--arm">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/arm-left.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-arm wg-arm--right" style="grid-area: arR">
+            <div class="wg-frame wg-frame--arm">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/arm-right.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-avatar" style="grid-area: hd">
+            <div class="wg-frame wg-frame--avatar">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/head.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: bs1">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-07.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: bs2">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-08.png" alt="" />
+              </div>
+            </div>
+          </div>
+          <div class="wg-cell wg-screen" style="grid-area: bw">
+            <div class="wg-frame wg-frame--screen">
+              <div class="wg-frame-inner">
+                <img src="white_gallery/screen-09.png" alt="" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="scene-fade" class="scene-fade" aria-hidden="true"></div>
+    <button
+      type="button"
+      id="white-door-gallery-exit"
+      class="white-door-gallery-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="white-door-gallery-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="yellow-door-scene-root"
+      class="yellow-door-scene"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="yellow-door-scene__stage" aria-label="黄门后场景">
+        <div class="yellow-door-scene__verify-stack" hidden>
+          <img class="yellow-door-scene__verify" alt="" decoding="async" />
+          <div class="yellow-door-scene__grid" hidden aria-hidden="true">
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="0"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="1"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="2"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="3"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="4"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="5"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="6"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="7"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+            <div class="yellow-door-scene__cell" data-yellow-portrait-index="8"><div class="yellow-door-scene__portrait-transform"><img class="yellow-door-scene__portrait" alt="" decoding="async" /></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="yellow-door-scene-exit"
+      class="yellow-door-scene-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="yellow-door-scene-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="red-door-scene-root"
+      class="red-door-scene"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="red-door-scene__backdrop" aria-hidden="true"></div>
+      <div class="red-door-scene__stage" aria-label="红门后舞台">
+        <div class="red-door-scene__layers">
+          <img
+            class="red-door-scene__bg"
+            src="red_door_scene/bg_stage.png"
+            alt=""
+            decoding="async"
+          />
+          <img
+            class="red-door-scene__hero"
+            src="red_door_scene/hero_kardashian.png"
+            alt=""
+            decoding="async"
+          />
+          <img
+            class="red-door-scene__fg"
+            src="red_door_scene/foreground_audiences.png"
+            alt=""
+            decoding="async"
+          />
+          <img
+            class="red-door-scene__fg-after"
+            src="red_door_scene/foreground_audiences_after.png"
+            alt=""
+            decoding="async"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="red-door-scene-exit"
+      class="red-door-scene-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="red-door-scene-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="blue-door-void-root"
+      class="blue-door-void"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="blue-door-void__void" aria-hidden="true"></div>
+      <div class="blue-door-void__stage" aria-label="蓝门后虚空与镜">
+        <div
+          class="blue-door-void__reveal-layer"
+          data-bdv-reveal
+          role="button"
+          tabindex="-1"
+          aria-label="点击显现下一面镜"
+        ></div>
+        <div class="blue-door-void__mirrors">
+          <div class="blue-door-void__mirror" data-blue-mirror-index="0">
+            <div class="blue-door-void__mirror-plate">
+              <img alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="blue-door-void__mirror" data-blue-mirror-index="1">
+            <div class="blue-door-void__mirror-plate">
+              <img alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="blue-door-void__mirror" data-blue-mirror-index="2">
+            <div class="blue-door-void__mirror-plate">
+              <img alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="blue-door-void__mirror" data-blue-mirror-index="3">
+            <div class="blue-door-void__mirror-plate">
+              <img alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="blue-door-void__mirror" data-blue-mirror-index="4">
+            <div class="blue-door-void__mirror-plate">
+              <img alt="" decoding="async" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="blue-door-void-exit"
+      class="blue-door-void-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="blue-door-void-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="mint-door-greenscreen-root"
+      class="mint-door-greenscreen"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="mint-door-greenscreen__stage" aria-label="薄荷绿门后绿幕">
+        <div class="mint-door-greenscreen__layers">
+          <div class="mint-door-greenscreen__slot" data-mint-layer-index="0">
+            <div class="mint-door-greenscreen__layer-transform">
+              <img class="mint-door-greenscreen__layer-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="mint-door-greenscreen__slot" data-mint-layer-index="1">
+            <div class="mint-door-greenscreen__layer-transform">
+              <img class="mint-door-greenscreen__layer-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="mint-door-greenscreen__slot" data-mint-layer-index="2">
+            <div class="mint-door-greenscreen__layer-transform">
+              <img class="mint-door-greenscreen__layer-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="mint-door-greenscreen__slot" data-mint-layer-index="3">
+            <div class="mint-door-greenscreen__layer-transform">
+              <img class="mint-door-greenscreen__layer-img" alt="" decoding="async" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="mint-door-greenscreen-exit"
+      class="mint-door-greenscreen-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="mint-door-greenscreen-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="pink-door-scene-root"
+      class="pink-door-scene"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="pink-door-scene__stage" aria-label="粉门后场景">
+        <div class="pink-door-scene__room" aria-hidden="true">
+          <div class="pink-door-scene__poster" data-poster-id="1">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="2">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="3">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="4">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="5">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="6">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="7">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="8">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+          <div class="pink-door-scene__poster" data-poster-id="9">
+            <div class="pink-door-scene__poster-transform">
+              <img class="pink-door-scene__poster-img" alt="" decoding="async" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="pink-door-scene-exit"
+      class="pink-door-scene-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="pink-door-scene-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="purple-door-scene-root"
+      class="purple-door-scene"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="purple-door-scene__stage" aria-label="紫门后场景">
+        <img
+          class="purple-door-scene__bg"
+          src=""
+          alt=""
+          decoding="async"
+        />
+        <img
+          class="purple-door-scene__curtain purple-door-scene__curtain--half"
+          src=""
+          alt=""
+          decoding="async"
+        />
+        <img
+          class="purple-door-scene__curtain purple-door-scene__curtain--full"
+          src=""
+          alt=""
+          decoding="async"
+        />
+        <img
+          class="purple-door-scene__screen-bg"
+          src=""
+          alt=""
+          decoding="async"
+        />
+        <div class="purple-door-scene__model-zone" aria-hidden="true">
+          <div class="purple-door-scene__model-track">
+            <img
+              class="purple-door-scene__model purple-door-scene__model--a"
+              src=""
+              alt=""
+              decoding="async"
+            />
+            <img
+              class="purple-door-scene__model purple-door-scene__model--b"
+              src=""
+              alt=""
+              decoding="async"
+            />
+          </div>
+        </div>
+        <img
+          class="purple-door-scene__curtain purple-door-scene__curtain--matte"
+          src=""
+          alt=""
+          decoding="async"
+        />
+        <p class="purple-door-scene__hint">· 双击尝试打开窗帘。</p>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="purple-door-scene-exit"
+      class="purple-door-scene-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="purple-door-scene-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <div
+      id="coral-door-scene-root"
+      class="coral-door-scene"
+      hidden
+      aria-hidden="true"
+    >
+      <div class="coral-door-scene__stage" aria-label="西柚色门后场景">
+        <div
+          class="coral-door-scene__twins-layer"
+          hidden
+          aria-hidden="true"
+        >
+          <img
+            class="coral-door-scene__twins"
+            src=""
+            alt=""
+            decoding="async"
+            draggable="false"
+          />
+        </div>
+        <div
+          class="coral-door-scene__phone-follower"
+          hidden
+          aria-hidden="true"
+        >
+          <img
+            class="coral-door-scene__phone-frame"
+            src=""
+            alt=""
+            decoding="async"
+            draggable="false"
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      type="button"
+      id="coral-door-scene-exit"
+      class="coral-door-scene-exit"
+      hidden
+      aria-label="返回门廊"
+    >
+      <img
+        class="coral-door-scene-exit__img"
+        src="white_gallery/ui_back.png"
+        alt=""
+        decoding="async"
+      />
+    </button>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

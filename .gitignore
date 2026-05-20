@@ -1,0 +1,24 @@
+# 勿把 Cursor 安装目录提交到仓库
+cursor/
+
+# 依赖与构建产物
+**/node_modules/
+doors/dist/
+
+# 嵌套 Git 仓库（doors 目录内若曾单独 init）
+doors/.git/
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+!.vscode/extensions.json
+
+# 本地环境
+.env
+.env.*
+
+# 根目录重复的素材包（实际使用 doors/assets 与 doors/public）
+/assets/
+/assets_*/

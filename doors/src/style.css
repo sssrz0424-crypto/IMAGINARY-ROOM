@@ -1,0 +1,2570 @@
+html,
+body {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+.main-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #000;
+}
+
+#app {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/**
+ * 注意：画廊层 z-index 必须高于「未激活」的 scene-fade。
+ * 否则整棵画廊子树（含返回按钮）都会被压在淡入层下面，透明层仍可能吃掉点击。
+ */
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.48s ease-in-out;
+}
+
+.scene-fade.scene-fade--visible {
+  z-index: 60;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 白门打开后的画廊场景 */
+body.doors-ui--white-gallery #app,
+body.doors-ui--green-void #app,
+body.doors-ui--red-scene #app,
+body.doors-ui--blue-void #app,
+body.doors-ui--mint-greenscreen #app,
+body.doors-ui--pink-scene #app,
+body.doors-ui--purple-scene #app,
+body.doors-ui--yellow-scene #app,
+body.doors-ui--coral-scene #app {
+  visibility: hidden;
+}
+
+/**
+ * 默认必须彻底隐藏画廊：仅用 HTML 的 hidden + author 的 display:flex
+ * 在部分浏览器里会冲突，导致一打开页面就铺满图、但返回按钮仍是 hidden。
+ */
+#white-door-gallery-root.white-door-gallery {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#white-door-gallery-root.white-door-gallery.white-door-gallery--open {
+  display: flex !important;
+  pointer-events: auto;
+}
+
+.white-door-gallery__backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 85% 70% at 50% 45%,
+      #e6e4de 0%,
+      #c9c5bc 48%,
+      #a8a49a 100%
+    );
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.12);
+}
+
+.white-door-gallery__backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.white-door-gallery__stage {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  width: min(94vw, 118vh);
+  max-height: 94vh;
+}
+
+/* 参考构图：左/右双竖条屏、顶双屏、中央头像、双臂、底宽屏 + 双小屏 */
+.wg-mosaic {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 7 / 5;
+  max-height: 90vh;
+  opacity: 1;
+  filter: none;
+  transition:
+    opacity 0.22s ease,
+    filter 0.22s ease;
+  grid-template-columns: 0.5fr 0.62fr 0.48fr 1.22fr 0.48fr 0.62fr 0.5fr;
+  grid-template-rows: 0.36fr 0.2fr 0.88fr 0.5fr 0.34fr;
+  gap: 0;
+  grid-template-areas:
+    "lv1 ht1 ht1 hd ht2 ht2 rv1"
+    "lv1 .   .   hd .   .   rv1"
+    "lv1 arL .   hd .   arR rv1"
+    "lv2 arL .   hd .   arR rv2"
+    "lv2 bs1 bs1 bw bs2 bs2 rv2";
+}
+
+.wg-mosaic.wg-mosaic--shuffled {
+  grid-template-areas:
+    "rv1 ht2 ht2 hd ht1 ht1 lv1"
+    "rv1 .   .   hd .   .   lv1"
+    "rv1 arL .   hd .   arR lv1"
+    "rv2 arL .   hd .   arR lv2"
+    "rv2 bs2 bs2 bw bs1 bs1 lv2";
+}
+
+.wg-mosaic.wg-mosaic--shuffle-flash {
+  opacity: 0.45;
+  filter: blur(2px);
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+
+.wg-cell {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 无额外画框/留白：仅作布局容器，素材边缘即视觉边缘 */
+.wg-frame {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.wg-frame-inner {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  transition: transform 0.28s ease-out;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.wg-frame-inner--hover {
+  transform: scale(1.065);
+}
+
+.wg-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* 保留素材文件中的透明通道，不做预乘或混合改写 */
+  image-rendering: auto;
+}
+
+.wg-screen {
+  cursor: pointer;
+}
+
+.wg-screen .wg-frame-inner {
+  pointer-events: none;
+  position: relative;
+}
+
+/*
+ * 黑屏：下层 PNG 仍含静态加载图标 → 用 ::before 同色圆盖住中心，
+ * ::after 仅一层「菊花」细分段环，慢速旋转，避免双层图标重叠。
+ */
+.wg-screen .wg-frame-inner::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* 略大于菊花环，盖住素材里 baked-in 的图标 */
+  width: clamp(34px, 4.8vmin, 58px);
+  height: clamp(34px, 4.8vmin, 58px);
+  margin-left: calc(clamp(34px, 4.8vmin, 58px) / -2);
+  margin-top: calc(clamp(34px, 4.8vmin, 58px) / -2);
+  border-radius: 50%;
+  background: #0a0a0a;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wg-screen .wg-frame-inner::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(26px, 3.5vmin, 46px);
+  height: clamp(26px, 3.5vmin, 46px);
+  margin-left: calc(clamp(26px, 3.5vmin, 46px) / -2);
+  margin-top: calc(clamp(26px, 3.5vmin, 46px) / -2);
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+  /* 细分段环：类似界面里的小菊花 */
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.12) 0deg 3deg,
+    rgba(255, 255, 255, 0.92) 3deg 9deg,
+    rgba(255, 255, 255, 0.12) 9deg 30deg
+  );
+  /* 环形遮罩：中间留空透出下层同色遮罩，仅显示一圈细分段 */
+  -webkit-mask: radial-gradient(
+    closest-side,
+    transparent 0 56%,
+    #fff 56.5% 74.5%,
+    transparent 75% 100%
+  );
+  mask: radial-gradient(
+    closest-side,
+    transparent 0 56%,
+    #fff 56.5% 74.5%,
+    transparent 75% 100%
+  );
+  animation: wg-loading-rotate 2.35s linear infinite;
+}
+
+@keyframes wg-loading-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wg-screen .wg-frame-inner::after {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
+.wg-arm,
+.wg-arm .wg-frame,
+.wg-arm .wg-frame-inner {
+  pointer-events: none;
+  cursor: default;
+}
+
+.wg-avatar {
+  cursor: pointer;
+}
+
+.wg-avatar .wg-frame-inner {
+  pointer-events: none;
+}
+
+#white-door-gallery-exit.white-door-gallery-exit {
+  display: none !important;
+}
+
+#white-door-gallery-exit.white-door-gallery-exit.white-door-gallery--exit-visible {
+  display: inline-block !important;
+}
+
+#red-door-scene-exit.red-door-scene-exit {
+  display: none !important;
+}
+
+#red-door-scene-exit.red-door-scene-exit.red-door-scene--exit-visible {
+  display: inline-block !important;
+}
+
+.white-door-gallery-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.white-door-gallery-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.white-door-gallery-exit:hover .white-door-gallery-exit__img {
+  filter: brightness(1.08);
+}
+
+.white-door-gallery-exit:active .white-door-gallery-exit__img {
+  filter: brightness(0.95);
+}
+
+.white-door-gallery-exit:focus-visible {
+  outline: 2px solid rgba(80, 140, 255, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.red-door-scene-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.red-door-scene-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.red-door-scene-exit:hover .red-door-scene-exit__img {
+  filter: brightness(1.08);
+}
+
+.red-door-scene-exit:active .red-door-scene-exit__img {
+  filter: brightness(0.95);
+}
+
+.red-door-scene-exit:focus-visible {
+  outline: 2px solid rgba(255, 120, 100, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+#red-door-scene-root.red-door-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#red-door-scene-root.red-door-scene.red-door-scene--open {
+  display: flex !important;
+  pointer-events: auto;
+}
+
+.red-door-scene__backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 92% 88% at 50% 42%,
+    rgba(28, 12, 10, 0.2) 0%,
+    rgba(8, 4, 6, 0.55) 72%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.35);
+}
+
+.red-door-scene__stage {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  pointer-events: auto;
+}
+
+.red-door-scene__layers {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0303;
+  /* 红门后构图：由 redDoorLayoutPanel 写入，以下为默认 */
+  --rds-bg-scale: 1;
+  --rds-bg-tx-pct: 0%;
+  --rds-bg-ty-pct: 0%;
+  --rds-bg-obj-x: 50%;
+  --rds-bg-obj-y: 40%;
+  --rds-hero-left-pct: 50%;
+  --rds-hero-bottom: 2.5vh;
+  --rds-hero-width-vw: 96;
+  --rds-hero-max-vh: 88;
+  --rds-hero-max-vw: 92;
+  --rds-hero-nudge-x: 0px;
+  --rds-hero-nudge-y: -106px;
+  --rds-hero-scale: 1.04;
+  --rds-hero-rotate: 0deg;
+  --rds-fg-max-vh: 45.5;
+  --rds-fg-max-vw: 52;
+  --rds-fg-width-pct: 100%;
+  --rds-fg-bottom: 0vh;
+  --rds-fg-nudge-x: -2px;
+  --rds-fg-nudge-y: 84px;
+  --rds-fg-scale: 1;
+  --rds-fg-opacity: 1;
+  --rds-fg-obj-x: 50%;
+  --rds-fg-obj-y: 100%;
+  /* 举手机观众层（与 fg 同套参数，可单独调） */
+  --rds-fga-max-vh: 55;
+  --rds-fga-max-vw: 52;
+  --rds-fga-width-pct: 100%;
+  --rds-fga-bottom: 0vh;
+  --rds-fga-nudge-x: -2px;
+  --rds-fga-nudge-y: 118px;
+  --rds-fga-scale: 1;
+  --rds-fga-opacity: 1;
+  --rds-fga-obj-x: 50%;
+  --rds-fga-obj-y: 100%;
+}
+
+.red-door-scene__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--rds-bg-obj-x) var(--rds-bg-obj-y);
+  transform: translate(var(--rds-bg-tx-pct), var(--rds-bg-ty-pct))
+    scale(var(--rds-bg-scale));
+  transform-origin: center center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.red-door-scene__hero {
+  position: absolute;
+  left: var(--rds-hero-left-pct);
+  bottom: var(--rds-hero-bottom);
+  transform: translate(
+      calc(-50% + var(--rds-hero-nudge-x)),
+      var(--rds-hero-nudge-y)
+    )
+    scale(var(--rds-hero-scale)) rotate(var(--rds-hero-rotate));
+  transform-origin: bottom center;
+  width: min(100%, calc(var(--rds-hero-width-vw) * 1vw));
+  height: auto;
+  max-height: min(
+    calc(var(--rds-hero-max-vh) * 1vh),
+    calc(var(--rds-hero-max-vw) * 1vw)
+  );
+  object-fit: contain;
+  object-position: bottom center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.45));
+}
+
+.red-door-scene__fg {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: var(--rds-fg-bottom);
+  width: var(--rds-fg-width-pct);
+  height: auto;
+  max-height: min(
+    calc(var(--rds-fg-max-vh) * 1vh),
+    calc(var(--rds-fg-max-vw) * 1vw)
+  );
+  object-fit: cover;
+  object-position: var(--rds-fg-obj-x) var(--rds-fg-obj-y);
+  transform: translate(
+      calc(-50% + var(--rds-fg-nudge-x)),
+      var(--rds-fg-nudge-y)
+    )
+    scale(var(--rds-fg-scale));
+  transform-origin: bottom center;
+  opacity: var(--rds-fg-opacity);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  transition: opacity 0.12s ease-out;
+}
+
+.red-door-scene__fg-after {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: var(--rds-fga-bottom);
+  width: var(--rds-fga-width-pct);
+  height: auto;
+  max-height: min(
+    calc(var(--rds-fga-max-vh) * 1vh),
+    calc(var(--rds-fga-max-vw) * 1vw)
+  );
+  object-fit: cover;
+  object-position: var(--rds-fga-obj-x) var(--rds-fga-obj-y);
+  transform: translate(
+      calc(-50% + var(--rds-fga-nudge-x)),
+      var(--rds-fga-nudge-y)
+    )
+    scale(var(--rds-fga-scale));
+  transform-origin: bottom center;
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 3;
+  transition: opacity 0.12s ease-out;
+}
+
+.red-door-scene__layers--audience-photo .red-door-scene__fg {
+  opacity: 0;
+}
+
+.red-door-scene__layers--audience-photo .red-door-scene__fg-after {
+  opacity: var(--rds-fga-opacity);
+}
+
+.red-scene-layout-panel {
+  top: 12px;
+  left: 12px;
+  right: auto;
+  z-index: 72;
+}
+
+.blue-void-layout-panel {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  z-index: 73;
+}
+
+.mirror-hud-layout-panel {
+  top: auto;
+  bottom: 12px;
+  left: 12px;
+  right: auto;
+  z-index: 74;
+  max-height: min(56vh, 560px);
+}
+
+.layout-panel.layout-panel--floated {
+  right: auto !important;
+  bottom: auto !important;
+}
+
+.layout-panel {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 70;
+  width: min(360px, calc(100vw - 24px));
+  min-width: 220px;
+  min-height: 140px;
+  max-width: min(96vw, 920px);
+  max-height: min(94vh, 900px);
+  resize: both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font:
+    12px/1.45 system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+  color: #e8e8e8;
+  background: rgba(18, 18, 22, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.layout-panel--collapsed .layout-panel__body {
+  display: none;
+}
+
+.layout-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.layout-panel__hint {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.layout-panel__collapse {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.layout-panel__collapse:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.layout-panel__body {
+  padding: 10px 12px 12px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.layout-panel__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 88px;
+  gap: 6px;
+  align-items: center;
+}
+
+.blue-void-layout-panel.layout-panel {
+  min-width: min(420px, 94vw);
+  max-width: min(520px, 96vw);
+}
+
+.layout-panel__row > span {
+  opacity: 0.85;
+}
+
+.layout-panel__row input[type="range"] {
+  width: 100%;
+}
+
+.layout-panel__row input[type="number"] {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 11px;
+}
+
+.layout-panel__select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+}
+
+.layout-panel__fieldset {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px 10px;
+  margin: 0;
+}
+
+.layout-panel__fieldset legend {
+  padding: 0 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.layout-panel__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.layout-panel__actions button {
+  flex: 1;
+  min-width: 120px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(120, 140, 255, 0.22);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.layout-panel__actions button:hover {
+  background: rgba(120, 140, 255, 0.32);
+}
+
+.layout-panel__help {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.65;
+}
+
+/* 橄榄绿门后：全屏橄榄绿画面（色值参考绿门示意图） */
+#green-door-void-root.green-door-void {
+  --green-void-bg: #8da541;
+  --green-void-text: #000;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#green-door-void-root.green-door-void.green-door-void--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.green-door-void__void {
+  position: absolute;
+  inset: 0;
+  background: var(--green-void-bg);
+}
+
+.green-door-void__lines {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.green-door-void__lines-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.green-door-void__line {
+  margin: 0;
+  padding: 0;
+  color: var(--green-void-text);
+  font-family: Silkscreen, "Courier New", Courier, monospace;
+  font-size: clamp(0.95rem, 2.8vw, 1.65rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* 第 1 次：画面正中，颜色淡化后消失 */
+.green-door-void__lines--center .green-door-void__lines-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.green-door-void__line--center {
+  position: relative;
+  max-width: min(92vw, 48rem);
+}
+
+.green-door-void__line--center-fade {
+  animation: greenVoidPromptFade 3s ease-in forwards;
+}
+
+.green-door-void__line--center-out {
+  animation: greenVoidPromptFade 0.35s ease-in forwards !important;
+}
+
+@keyframes greenVoidPromptFade {
+  0% {
+    color: var(--green-void-text);
+  }
+
+  100% {
+    color: var(--green-void-bg);
+  }
+}
+
+/* 第 2–3 次：从画面顶部出现并向下叠行 */
+.green-door-void__lines--top-stack .green-door-void__lines-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(0.35rem, 1.6vh, 0.65rem);
+  padding: clamp(1.25rem, 5vh, 2.75rem) 1rem 1rem;
+  box-sizing: border-box;
+}
+
+.green-door-void__lines--top-stack .green-door-void__line--from-top {
+  position: relative;
+  max-width: min(92vw, 48rem);
+  opacity: 0;
+  transform: translateY(-1.25rem);
+  transition:
+    opacity 0.5s ease,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.green-door-void__lines--top-stack .green-door-void__line--from-top.green-door-void__line--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 第 4 次点击：文字从中心聚集成球 */
+.green-door-void__lines--sphere {
+  perspective: min(820px, 105vw);
+  perspective-origin: 50% 48%;
+}
+
+.green-door-void__lines--sphere .green-door-void__lines-inner {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.green-door-void__lines--sphere .green-door-void__line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  font-size: clamp(0.5rem, 1.15vw, 0.74rem);
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  transition:
+    transform 0.92s cubic-bezier(0.18, 0.92, 0.22, 1),
+    opacity 0.55s ease;
+}
+
+.green-door-void__lines--sphere-forming .green-door-void__line--placed {
+  transition-duration: 0.78s, 0.45s;
+}
+
+/* 球成型后再点：打散 → 坠地 */
+.green-door-void__lines--collapse {
+  perspective: none;
+}
+
+.green-door-void__lines--collapse .green-door-void__lines-inner {
+  transform: none;
+  animation: none;
+}
+
+.green-door-void__lines--collapse .green-door-void__line {
+  transition:
+    transform 0.92s cubic-bezier(0.18, 0.95, 0.28, 1),
+    opacity 0.55s ease;
+}
+
+.green-door-void__lines--collapse .green-door-void__line--falling {
+  transition:
+    transform 1.45s cubic-bezier(0.52, 0.04, 0.78, 0.92),
+    opacity 1s ease-out;
+}
+
+/* 坠地后再点：散落文字聚向中心，合成一行大字 */
+.green-door-void__lines--giant-gather .green-door-void__line {
+  transition:
+    transform 1.05s cubic-bezier(0.22, 1, 0.32, 1),
+    opacity 0.9s ease;
+}
+
+.green-door-void__lines--giant {
+  perspective: none;
+}
+
+.green-door-void__lines--giant .green-door-void__lines-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.green-door-void__lines--giant .green-door-void__line--giant {
+  position: relative;
+  left: auto;
+  top: auto;
+  max-width: min(94vw, 52rem);
+  font-size: clamp(1.2rem, 5.2vw, 3.15rem);
+  letter-spacing: 0.05em;
+  line-height: 1.32;
+  text-align: center;
+  white-space: normal;
+  opacity: 0;
+  transform: scale(0.7);
+  transition:
+    opacity 1.15s ease,
+    transform 1.2s cubic-bezier(0.2, 0.95, 0.28, 1);
+}
+
+.green-door-void__lines--giant .green-door-void__line--giant.green-door-void__line--giant-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#green-door-void-exit.green-door-void-exit {
+  display: none !important;
+}
+
+#green-door-void-exit.green-door-void-exit.green-door-void-exit--visible {
+  display: inline-block !important;
+}
+
+.green-door-void-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.green-door-void-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.22));
+}
+
+.green-door-void-exit:hover .green-door-void-exit__img {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.22)) brightness(1.08);
+}
+
+.green-door-void-exit:active .green-door-void-exit__img {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.22)) brightness(0.95);
+}
+
+.green-door-void-exit:focus-visible {
+  outline: 2px solid rgba(80, 140, 255, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 蓝门后：纯黑底 + 五镜 CSS3D 正面排布（布局由 blueDoorVoidLayoutPanel 驱动） */
+#blue-door-void-root.blue-door-void {
+  --bdv-img-glow-blur: 28px;
+  --bdv-img-glow-a: 0.45;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#blue-door-void-root.blue-door-void.blue-door-void--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.blue-door-void__void {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: #000;
+}
+
+.blue-door-void__stage {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  pointer-events: none;
+  --bdv-floor-opacity: 0;
+}
+
+/* 镜外虚空：仅此层接收「显现下一面镜」点击 */
+.blue-door-void__reveal-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  background: transparent;
+}
+
+.blue-door-void__stage::after {
+  content: none;
+}
+
+.blue-door-void__mirrors {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+#blue-door-void-root.blue-door-void--flat .blue-door-void__mirrors {
+  transform-style: flat;
+  perspective: none !important;
+}
+
+/* 外层：锚点水平居中 + 入场；景深由 --bdv-mz / --bdv-ms / --bdv-my 控制 */
+.blue-door-void__mirror {
+  position: absolute;
+  box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+  transform-style: preserve-3d;
+  transform-origin: 50% 100%;
+  --bdv-mx: 0;
+  --bdv-my: 0;
+  --bdv-mz: 0;
+  --bdv-ms: 1;
+  --mh-rail-right: 3.5%;
+  --mh-rail-bottom: 14%;
+  --mh-rail-scale: 1;
+  --mh-rail-nudge-x: 0px;
+  --mh-rail-nudge-y: 0px;
+  --mh-meta-left: 4.5%;
+  --mh-meta-bottom: 8%;
+  --mh-meta-scale: 1;
+  --mh-meta-nudge-x: 0px;
+  --mh-meta-nudge-y: 0px;
+  transform:
+    translateX(calc(-50% + var(--bdv-mx) * 1px))
+    translateY(calc(var(--bdv-my) * 1px + 16px))
+    translateZ(calc(var(--bdv-mz) * 1px))
+    scale(var(--bdv-ms));
+  transition:
+    opacity 0.55s ease,
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.blue-door-void__mirror:not(.blue-door-void__mirror--visible),
+.blue-door-void__mirror:not(.blue-door-void__mirror--visible) * {
+  pointer-events: none !important;
+}
+
+.blue-door-void__mirror.blue-door-void__mirror--visible {
+  visibility: visible;
+  opacity: 1;
+  transform:
+    translateX(calc(-50% + var(--bdv-mx) * 1px))
+    translateY(calc(var(--bdv-my) * 1px))
+    translateZ(calc(var(--bdv-mz) * 1px))
+    scale(var(--bdv-ms));
+  /* 仅镜内子元素（镜图 / 图标列）可点；镜框留白不挡虚空点击 */
+  pointer-events: none;
+}
+
+#blue-door-void-root.blue-door-void--flat .blue-door-void__mirror,
+#blue-door-void-root.blue-door-void--flat .blue-door-void__mirror.blue-door-void__mirror--visible {
+  transform-style: flat;
+  transform-origin: 50% 50%;
+  transform:
+    translateX(calc(-50% + var(--bdv-mx) * 1px))
+    translateY(calc(var(--bdv-my) * 1px))
+    scale(var(--bdv-ms));
+}
+
+#blue-door-void-root.blue-door-void--flat .blue-door-void__mirror-plate,
+#blue-door-void-root.blue-door-void--flat .mirror-hud {
+  transform: none !important;
+  transform-style: flat;
+}
+
+#blue-door-void-root:not(.blue-door-void--flat) .blue-door-void__mirror,
+#blue-door-void-root:not(.blue-door-void--flat) .blue-door-void__mirror.blue-door-void__mirror--visible {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+}
+
+#blue-door-void-root:not(.blue-door-void--flat) .blue-door-void__mirror-plate {
+  transform-style: preserve-3d;
+}
+
+.blue-door-void__mirror-plate {
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transform-origin: 50% 50%;
+}
+
+/* —— 镜面内叠层：与镜面同 transform，无手机外框 —— */
+.blue-door-void__mirror-plate .mirror-hud {
+  width: 100%;
+  height: 100%;
+  filter:
+    drop-shadow(0 16px 28px rgba(0, 0, 0, 0.42))
+    drop-shadow(
+      0 0 var(--bdv-img-glow-blur, 28px) hsla(210, 100%, 78%, var(--bdv-img-glow-a, 0.4))
+    );
+}
+
+.mirror-hud {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  pointer-events: none;
+}
+
+.mirror-hud__media {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mirror-hud__poster {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  pointer-events: none;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+
+/* 仅覆盖 object-fit:contain 后的真实镜图区域，避免镜框留白误触点赞 */
+.mirror-hud__poster-hit {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  pointer-events: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.mirror-hud__hearts {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.mirror-hud__float-heart {
+  position: absolute;
+  font-size: clamp(18px, 3.2vw, 28px);
+  color: #fe2c55;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  animation: tk-float-heart 0.85s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes tk-float-heart {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(calc(var(--tk-drift, 0px) * 0.2), -12px) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tk-drift, 0px), -88px) scale(0.85);
+  }
+}
+
+.mirror-hud__rail {
+  position: absolute;
+  right: var(--mh-rail-right, 3.5%);
+  bottom: var(--mh-rail-bottom, 14%);
+  z-index: 6;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1.35vh, 11px);
+  width: clamp(28px, 4.2vw, 40px);
+  transform: translate(var(--mh-rail-nudge-x, 0px), var(--mh-rail-nudge-y, 0px))
+    scale(var(--mh-rail-scale, 1));
+  transform-origin: right bottom;
+}
+
+.mirror-hud__avatar-wrap {
+  position: relative;
+  width: clamp(28px, 4vw, 38px);
+  height: clamp(28px, 4vw, 38px);
+  margin-bottom: 2px;
+}
+
+.mirror-hud__avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.mirror-hud__follow {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  width: clamp(14px, 2vw, 18px);
+  height: clamp(14px, 2vw, 18px);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #fe2c55;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.mirror-hud__follow svg {
+  width: 58%;
+  height: 58%;
+}
+
+.mirror-hud__follow--done {
+  background: #6b7280;
+  transform: translateX(-50%) scale(0.92);
+}
+
+.mirror-hud__action {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.96);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.75),
+    0 0 12px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+
+.mirror-hud__action--pop {
+  animation: tk-like-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mirror-hud__action--flash {
+  animation: tk-action-flash 0.32s ease;
+}
+
+@keyframes tk-like-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.28);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes tk-action-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.mirror-hud__icon {
+  display: block;
+  width: clamp(22px, 3.2vw, 32px);
+  height: clamp(22px, 3.2vw, 32px);
+  fill: rgba(255, 255, 255, 0.95);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.mirror-hud__icon--heart path {
+  fill: rgba(255, 255, 255, 0.95);
+  transition: fill 0.2s ease;
+}
+
+.mirror-hud__action--liked .mirror-hud__icon--heart path {
+  fill: #fe2c55;
+}
+
+.mirror-hud__icon--bookmark path {
+  fill: rgba(255, 255, 255, 0.95);
+  transition: fill 0.2s ease;
+}
+
+.mirror-hud__action--saved .mirror-hud__icon--bookmark path {
+  fill: #face15;
+}
+
+.mirror-hud__count {
+  font-size: clamp(8px, 1.05vw, 11px);
+  font-weight: 600;
+  line-height: 1.1;
+  font-family: system-ui, sans-serif;
+}
+
+.mirror-hud__disc {
+  width: clamp(22px, 3vw, 30px);
+  height: clamp(22px, 3vw, 30px);
+  margin-top: 2px;
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(from 0deg, #222, #555, #222);
+  animation: tk-disc-spin 4s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+}
+
+.mirror-hud__disc-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #444, #111 65%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+@keyframes tk-disc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mirror-hud__meta {
+  position: absolute;
+  left: var(--mh-meta-left, 4.5%);
+  right: 12%;
+  bottom: var(--mh-meta-bottom, 8%);
+  z-index: 5;
+  max-width: 78%;
+  color: #fff;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.85),
+    0 0 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  transform: translate(var(--mh-meta-nudge-x, 0px), var(--mh-meta-nudge-y, 0px))
+    scale(var(--mh-meta-scale, 1));
+  transform-origin: left bottom;
+}
+
+.mirror-hud__user {
+  margin: 0 0 0.35em;
+  font-size: clamp(9px, 1.15vw, 12px);
+  font-weight: 700;
+}
+
+.mirror-hud__caption {
+  margin: 0;
+  font-size: clamp(8px, 1.05vw, 11px);
+  line-height: 1.35;
+  opacity: 0.96;
+}
+
+#blue-door-void-root.blue-door-void--open:not(:has(.blue-door-void__mirror--visible)) {
+  cursor: pointer;
+}
+
+.bdv-tiktok-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 12%;
+  z-index: 2147483645;
+  transform: translateX(-50%) translateY(12px);
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: rgba(20, 20, 20, 0.92);
+  color: #fff;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.bdv-tiktok-toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+#blue-door-void-exit.blue-door-void-exit {
+  display: none !important;
+}
+
+#blue-door-void-exit.blue-door-void-exit.blue-door-void-exit--visible {
+  display: inline-block !important;
+}
+
+.blue-door-void-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.blue-door-void-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.blue-door-void-exit:hover .blue-door-void-exit__img {
+  filter: brightness(1.08);
+}
+
+.blue-door-void-exit:active .blue-door-void-exit__img {
+  filter: brightness(0.95);
+}
+
+.blue-door-void-exit:focus-visible {
+  outline: 2px solid rgba(120, 180, 255, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 黄门后：全屏背景（素材见 assets/yellow_door_scene/background.png） */
+#yellow-door-scene-root.yellow-door-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: visible;
+  pointer-events: none;
+}
+
+#yellow-door-scene-root.yellow-door-scene.yellow-door-scene--open {
+  display: block !important;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.yellow-door-scene__stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: visible;
+  background-color: #f5e050;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.yellow-door-scene__verify-stack {
+  position: relative;
+  display: inline-block;
+  max-width: min(92vw, 880px);
+  max-height: min(88vh, 92%);
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
+}
+
+.yellow-door-scene__verify-stack.yellow-door-scene__verify-stack--visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.yellow-door-scene__verify {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(88vh, 92%);
+  margin: 0;
+  padding: 0;
+  border: none;
+  object-fit: contain;
+  vertical-align: top;
+}
+
+.yellow-door-scene__grid {
+  position: absolute;
+  top: 8.8%;
+  right: 4%;
+  bottom: 15%;
+  left: 4%;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 0;
+  box-sizing: border-box;
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+
+.yellow-door-scene__grid.yellow-door-scene__grid--visible {
+  opacity: 1;
+}
+
+.yellow-door-scene__cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  background: none;
+}
+
+.yellow-door-scene__portrait-transform {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 8px;
+  min-height: 8px;
+  transform-origin: center center;
+}
+
+.yellow-door-scene__portrait {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 8px;
+  min-height: 8px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  object-position: center center;
+  pointer-events: none;
+}
+
+.yellow-door-scene__grid.yellow-door-scene__grid--visible .yellow-door-scene__portrait {
+  visibility: visible;
+}
+
+/* ?yellowScene=1：鼠标选中、拖拽、拉伸手柄 */
+body.yellow-scene-direct-manip .yellow-door-scene__grid.yellow-door-scene__grid--visible {
+  pointer-events: auto;
+}
+
+body.yellow-scene-direct-manip .yellow-door-scene__portrait-transform {
+  pointer-events: auto;
+  cursor: move;
+}
+
+body.yellow-scene-direct-manip .yellow-door-scene__cell--selected .yellow-door-scene__portrait-transform {
+  outline: 2px solid rgba(255, 228, 80, 0.95);
+  outline-offset: 0;
+}
+
+.yellow-portrait-handles {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+body.yellow-scene-direct-manip .yellow-door-scene__cell--selected .yellow-portrait-handles {
+  display: block;
+}
+
+.yellow-portrait-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 228, 80, 0.98);
+  background: rgba(20, 18, 8, 0.88);
+  border-radius: 1px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.yellow-portrait-handle[data-handle="nw"] {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+.yellow-portrait-handle[data-handle="n"] {
+  top: 0;
+  left: 50%;
+  cursor: ns-resize;
+}
+.yellow-portrait-handle[data-handle="ne"] {
+  top: 0;
+  left: 100%;
+  cursor: nesw-resize;
+}
+.yellow-portrait-handle[data-handle="e"] {
+  top: 50%;
+  left: 100%;
+  cursor: ew-resize;
+}
+.yellow-portrait-handle[data-handle="se"] {
+  top: 100%;
+  left: 100%;
+  cursor: nwse-resize;
+}
+.yellow-portrait-handle[data-handle="s"] {
+  top: 100%;
+  left: 50%;
+  cursor: ns-resize;
+}
+.yellow-portrait-handle[data-handle="sw"] {
+  top: 100%;
+  left: 0;
+  cursor: nesw-resize;
+}
+.yellow-portrait-handle[data-handle="w"] {
+  top: 50%;
+  left: 0;
+  cursor: ew-resize;
+}
+.yellow-portrait-handle[data-handle="scale"] {
+  top: 100%;
+  left: 100%;
+  width: 14px;
+  height: 14px;
+  margin: 2px 0 0 2px;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  background: rgba(255, 228, 80, 0.95);
+  border-color: rgba(20, 18, 8, 0.9);
+}
+
+.layout-panel__help--compact {
+  margin-bottom: 8px;
+}
+
+#yellow-door-scene-exit.yellow-door-scene-exit {
+  display: none !important;
+}
+
+#yellow-door-scene-exit.yellow-door-scene-exit.yellow-door-scene-exit--visible {
+  display: inline-block !important;
+}
+
+.yellow-door-scene-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.yellow-door-scene-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.yellow-door-scene-exit:hover .yellow-door-scene-exit__img {
+  filter: brightness(1.08);
+}
+
+.yellow-door-scene-exit:active .yellow-door-scene-exit__img {
+  filter: brightness(0.95);
+}
+
+.yellow-door-scene-exit:focus-visible {
+  outline: 2px solid rgba(255, 220, 80, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 粉门后：全屏粉色背景（素材见 assets/pink_door_scene，源 assets_粉门后场景/background.png） */
+#pink-door-scene-root.pink-door-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#pink-door-scene-root.pink-door-scene.pink-door-scene--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.pink-door-scene__stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #f8c8dc;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.pink-door-scene__room {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  perspective: var(--pink-room-perspective, 1420px);
+  perspective-origin: 50% 50%;
+  pointer-events: none;
+}
+
+.pink-door-scene__poster {
+  position: absolute;
+  box-sizing: border-box;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.pink-door-scene__poster-transform {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.pink-door-scene__poster-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
+}
+
+#pink-door-scene-exit.pink-door-scene-exit {
+  display: none !important;
+}
+
+#pink-door-scene-exit.pink-door-scene-exit.pink-door-scene-exit--visible {
+  display: inline-block !important;
+}
+
+.pink-door-scene-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.pink-door-scene-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.pink-door-scene-exit:hover .pink-door-scene-exit__img {
+  filter: brightness(1.08);
+}
+
+.pink-door-scene-exit:active .pink-door-scene-exit__img {
+  filter: brightness(0.95);
+}
+
+.pink-door-scene-exit:focus-visible {
+  outline: 2px solid rgba(255, 140, 190, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 西柚色门后：全屏背景（素材见 assets/coral_door_scene/background） */
+#coral-door-scene-root.coral-door-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#coral-door-scene-root.coral-door-scene.coral-door-scene--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.coral-door-scene__stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #f5d4c8;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/*
+ * 再双击：双子构图（对照示意）
+ * - 水平居中；肩线贴画面底边
+ * - 宽约 60vw（两侧留白），高约 80vh（顶部约 20% 留白）
+ * - 素材 1448×1080，含两侧橙色边；位于手机框下层
+ */
+.coral-door-scene__twins-layer {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  bottom: 0;
+  top: auto;
+  z-index: 42;
+  display: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.coral-door-scene__twins-layer.coral-door-scene__twins-layer--visible {
+  display: block;
+}
+
+.coral-door-scene__twins {
+  display: block;
+  width: 60vw;
+  height: auto;
+  max-width: 68vw;
+  max-height: 80vh;
+  object-fit: contain;
+  object-position: center bottom;
+  vertical-align: bottom;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* 再双击：手机框替代鼠标（素材 手机框_遮罩增大，框心对准指针） */
+body.doors-ui--coral-scene.coral-door-scene--phone-cursor,
+body.doors-ui--coral-scene.coral-door-scene--phone-cursor .coral-door-scene__stage {
+  cursor: none !important;
+}
+
+.coral-door-scene__phone-follower:not([hidden]) {
+  display: block;
+}
+
+.coral-door-scene__phone-follower {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 48;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(3.25);
+  transform-origin: center center;
+  width: min(96vw, calc(96vh * 1920 / 1080));
+  max-width: 96vw;
+  max-height: 96vh;
+  line-height: 0;
+  will-change: left, top, transform;
+}
+
+.coral-door-scene__phone-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 96vh;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+#coral-door-scene-exit.coral-door-scene-exit {
+  display: none !important;
+}
+
+#coral-door-scene-exit.coral-door-scene-exit.coral-door-scene-exit--visible {
+  display: inline-block !important;
+}
+
+.coral-door-scene-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+}
+
+.coral-door-scene-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.coral-door-scene-exit:hover .coral-door-scene-exit__img {
+  filter: brightness(1.08) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.coral-door-scene-exit:active .coral-door-scene-exit__img {
+  filter: brightness(0.95) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+.coral-door-scene-exit:focus-visible {
+  outline: 2px solid rgba(255, 160, 120, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 薄荷绿门后：全屏绿幕背景（素材见 public/mint_door_scene 或 assets/mint_door_scene） */
+#mint-door-greenscreen-root.mint-door-greenscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#mint-door-greenscreen-root.mint-door-greenscreen.mint-door-greenscreen--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.mint-door-greenscreen__stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+#mint-door-greenscreen-root ::selection {
+  background: transparent;
+  color: inherit;
+}
+
+.mint-door-greenscreen__layers {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: stretch;
+  gap: clamp(4px, 1vmin, 14px);
+  padding: clamp(10px, 2.5vmin, 28px);
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  transform-style: preserve-3d;
+}
+
+.mint-door-greenscreen__slot {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.mint-door-greenscreen__layer-transform {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+}
+
+.mint-door-greenscreen__layer-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mint-door-greenscreen__slot--visible .mint-door-greenscreen__layer-img {
+  visibility: visible;
+  opacity: var(--mint-layout-opacity, 1);
+}
+
+#mint-door-greenscreen-exit.mint-door-greenscreen-exit {
+  display: none !important;
+}
+
+#mint-door-greenscreen-exit.mint-door-greenscreen-exit.mint-door-greenscreen-exit--visible {
+  display: inline-block !important;
+}
+
+.mint-door-greenscreen-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2147483646;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.mint-door-greenscreen-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  max-width: min(44vw, 220px);
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.mint-door-greenscreen-exit:hover .mint-door-greenscreen-exit__img {
+  filter: brightness(1.08);
+}
+
+.mint-door-greenscreen-exit:active .mint-door-greenscreen-exit__img {
+  filter: brightness(0.95);
+}
+
+.mint-door-greenscreen-exit:focus-visible {
+  outline: 2px solid rgba(80, 220, 160, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* 紫门后：全屏背景（素材见 assets/purple_door_scene，源 assets_紫门后场景/background） */
+#purple-door-scene-root.purple-door-scene {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: none !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#purple-door-scene-root.purple-door-scene.purple-door-scene--open {
+  display: block !important;
+  pointer-events: auto;
+}
+
+.purple-door-scene__stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  background-color: #000;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.purple-door-scene__bg,
+.purple-door-scene__curtain {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  object-position: center;
+  pointer-events: none;
+}
+
+.purple-door-scene__bg {
+  z-index: 0;
+}
+
+.purple-door-scene__curtain {
+  z-index: 1;
+  opacity: 0;
+  visibility: hidden;
+  will-change: opacity;
+  backface-visibility: hidden;
+}
+
+.purple-door-scene__curtain--half {
+  transition:
+    opacity 0.42s ease-out,
+    visibility 0.42s ease-out;
+}
+
+.purple-door-scene__curtain--full {
+  z-index: 2;
+  transition:
+    opacity 0.58s ease-in,
+    visibility 0.58s ease-in;
+}
+
+/* 窗内紫屏（screen_bg_purple，源 背景_紫）：与窗帘层分离，避免 opacity 过渡产生虚线/叠影 */
+.purple-door-scene__screen-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  background-color: #120818;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+.purple-door-scene__curtain--matte {
+  z-index: 5;
+  transition: none;
+}
+
+#purple-door-scene-root.purple-door-scene--curtain-half .purple-door-scene__curtain--half,
+#purple-door-scene-root.purple-door-scene--curtain-full .purple-door-scene__curtain--half {
+  opacity: 1;
+  visibility: visible;
+}
+
+#purple-door-scene-root.purple-door-scene--curtain-full .purple-door-scene__curtain--half {
+  transition: none;
+}
+
+#purple-door-scene-root.purple-door-scene--curtain-full:not(.purple-door-scene--screen-lit)
+  .purple-door-scene__curtain--full {
+  opacity: 1;
+  visibility: visible;
+}
+
+#purple-door-scene-root.purple-door-scene--screen-lit .purple-door-scene__curtain--full {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+
+#purple-door-scene-root.purple-door-scene--screen-lit .purple-door-scene__screen-bg,
+#purple-door-scene-root.purple-door-scene--screen-lit .purple-door-scene__curtain--matte {
+  opacity: 1;
+  visibility: visible;
+  transition: none;
+}
+
+.purple-door-scene__model-zone {
+  position: absolute;
+  left: 5.2%;
+  right: 5.2%;
+  top: 9.5%;
+  bottom: 11.5%;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.purple-door-scene__model-track {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  width: max-content;
+  transform-origin: left bottom;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.purple-door-scene__model-zone--walking .purple-door-scene__model-track,
+.purple-door-scene__model-zone--preview:not(.purple-door-scene__model-zone--preview-all-steps)
+  .purple-door-scene__model-track {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ?purpleScene=1：七步叠影预览，隐藏单轨 */
+.purple-door-scene__model-zone--preview-all-steps .purple-door-scene__model-track {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.purple-door-scene__model-ghosts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.purple-door-scene__model-ghost {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.purple-door-scene__model-ghost-track {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  width: max-content;
+  transform-origin: left bottom;
+}
+
+.purple-door-scene__model-ghost-label {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  z-index: 2;
+  margin-bottom: 4px;
+  padding: 2px 6px;
+  font-family: system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 248, 255, 0.92);
+  background: rgba(40, 12, 64, 0.72);
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.purple-door-scene__model-ghost-img {
+  opacity: 0.78;
+  filter: drop-shadow(0 3px 14px rgba(0, 0, 0, 0.55));
+}
+
+#purple-door-scene-root.purple-door-scene--layout-preview-all-steps
+  .purple-door-scene__model-ghost:nth-child(odd)
+  .purple-door-scene__model-ghost-img {
+  opacity: 0.92;
+}
+
+#purple-door-scene-root.purple-door-scene--layout-preview-all-steps
+  .purple-door-scene__model-ghost:nth-child(even)
+  .purple-door-scene__model-ghost-img {
+  opacity: 0.86;
+}
+
+#purple-door-scene-root.purple-door-scene--epilogue-ghosts .purple-door-scene__model-track,
+#purple-door-scene-root.purple-door-scene--models-hidden .purple-door-scene__model-track {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#purple-door-scene-root.purple-door-scene--models-hidden .purple-door-scene__model-ghosts {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#purple-door-scene-root.purple-door-scene--epilogue-ghosts
+  .purple-door-scene__model-ghost:nth-child(odd)
+  .purple-door-scene__model-ghost-img {
+  opacity: 0.94;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.62));
+}
+
+#purple-door-scene-root.purple-door-scene--epilogue-ghosts
+  .purple-door-scene__model-ghost:nth-child(even)
+  .purple-door-scene__model-ghost-img {
+  opacity: 0.88;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.58));
+}
+
+/* 面板预览：强制显示亮起背景与窗框抠图，便于对位 */
+#purple-door-scene-root.purple-door-scene--layout-preview.purple-door-scene--screen-lit
+  .purple-door-scene__screen-bg,
+#purple-door-scene-root.purple-door-scene--layout-preview.purple-door-scene--screen-lit
+  .purple-door-scene__curtain--matte {
+  opacity: 1;
+  visibility: visible;
+}
+
+#purple-door-scene-root.purple-door-scene--layout-preview .purple-door-scene__curtain--full {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.purple-door-scene__model {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+  width: auto;
+  height: auto;
+  max-height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: left bottom;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s linear;
+}
+
+.purple-door-scene__model.purple-door-scene__model--active {
+  opacity: 1;
+}
+
+@keyframes purple-door-hint-breathe {
+  0%,
+  100% {
+    color: rgba(248, 242, 255, 0.58);
+    text-shadow:
+      0 0 12px rgba(120, 60, 180, 0.35),
+      0 1px 8px rgba(0, 0, 0, 0.65);
+  }
+  50% {
+    color: rgba(255, 252, 255, 0.98);
+    text-shadow:
+      0 0 18px rgba(160, 100, 220, 0.55),
+      0 1px 10px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* 暂时隐藏场景底部字幕提示 */
+.purple-door-scene__hint {
+  display: none !important;
+  position: absolute;
+  left: 50%;
+  bottom: clamp(52px, 11.5vh, 108px);
+  z-index: 6;
+  width: max-content;
+  max-width: min(92vw, 560px);
+  margin: 0;
+  padding: 0.42em 1.05em;
+  transform: translateX(-50%);
+  font-family: system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: clamp(14px, 1.9vmin, 19px);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(22, 10, 36, 0.42);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 4px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
+  transition:
+    opacity 0.55s ease,
+    visibility 0.55s ease;
+  animation: purple-door-hint-breathe 2.4s ease-in-out infinite;
+}
+
+#purple-door-scene-root.purple-door-scene--screen-lit .purple-door-scene__hint {
+  opacity: 0;
+  visibility: hidden;
+  animation: none;
+  transition: none;
+}
+
+#purple-door-scene-root.purple-door-scene--epilogue-ready .purple-door-scene__hint,
+#purple-door-scene-root.purple-door-scene--models-hidden .purple-door-scene__hint,
+#purple-door-scene-root.purple-door-scene--epilogue-ghosts .purple-door-scene__hint {
+  opacity: 1;
+  visibility: visible;
+  animation: purple-door-hint-breathe 2.4s ease-in-out infinite;
+}
+
+#purple-door-scene-exit.purple-door-scene-exit {
+  display: none !important;
+}
+
+#purple-door-scene-exit.purple-door-scene-exit.purple-door-scene-exit--visible {
+  display: inline-block !important;
+}
+
+.purple-door-scene-exit {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.purple-door-scene-exit__img {
+  display: block;
+  height: clamp(40px, 7.5vmin, 56px);
+  width: auto;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  transition: filter 0.15s ease;
+}
+
+.purple-door-scene-exit:hover .purple-door-scene-exit__img {
+  filter: brightness(1.08) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+}
+
+.purple-door-scene-exit:active .purple-door-scene-exit__img {
+  filter: brightness(0.95) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+}
+
+.purple-door-scene-exit:focus-visible {
+  outline: 2px solid rgba(180, 120, 255, 0.95);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
