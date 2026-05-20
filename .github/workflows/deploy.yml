@@ -23,9 +23,19 @@ jobs:
 
       - run: npm run build
 
-      - name: Publish dist to gh-pages branch
+      - name: Publish site to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          publish_branch: gh-pages
           force_orphan: true
+
+      - name: Publish site to docs/ on main (for branch-based Pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: main
+          destination_dir: docs
+          keep_files: true
