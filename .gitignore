@@ -7,6 +7,7 @@ doors/dist/
 
 # 嵌套 Git 仓库（doors 目录内若曾单独 init）
 doors/.git/
+doors/src/assets/
 
 # 系统与编辑器
 .DS_Store
