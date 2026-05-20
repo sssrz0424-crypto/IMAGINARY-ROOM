@@ -1,3 +1,13 @@
+import { showGreenDoorVoidScene } from "./greenDoorVoidScene.js";
+import { showWhiteDoorGalleryScene } from "./whiteDoorGalleryScene.js";
+import { showRedDoorBehindScene } from "./redDoorBehindScene.js";
+import { showBlueDoorVoidScene } from "./blueDoorVoidScene.js";
+import { showMintDoorGreenscreenScene } from "./mintDoorGreenscreenScene.js";
+import { showPurpleDoorBehindScene } from "./purpleDoorBehindScene.js";
+import { showPinkDoorBehindScene } from "./pinkDoorBehindScene.js";
+import { showYellowDoorScene } from "./yellowDoorScene.js";
+import { showCoralDoorBehindScene } from "./coralDoorBehindScene.js";
+
 /**
  * 九扇门 → 不同场景入口（占位）。后续在各 case 里挂载你的场景内容。
  * doorId：1–9，与 DOOR_LABEL_TO_ID 一致。
@@ -33,22 +43,31 @@ export function switchScene(doorId) {
 
   switch (doorId) {
     case 1:
+      showGreenDoorVoidScene();
       break;
     case 2:
+      showWhiteDoorGalleryScene();
       break;
     case 3:
+      showYellowDoorScene();
       break;
     case 4:
+      showPinkDoorBehindScene();
       break;
     case 5:
+      showMintDoorGreenscreenScene();
       break;
     case 6:
+      showCoralDoorBehindScene();
       break;
     case 7:
+      showPurpleDoorBehindScene();
       break;
     case 8:
+      showBlueDoorVoidScene();
       break;
     case 9:
+      showRedDoorBehindScene();
       break;
     default:
       console.warn("[switchScene] 未知 doorId", doorId);

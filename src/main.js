@@ -4,6 +4,43 @@ import { mountLayoutDebugPanel } from "./debugLayoutPanel.js";
 import { doorMotion } from "./doorMotionConfig.js";
 import { switchScene, DOOR_LABEL_TO_ID } from "./switchScene.js";
 import { runFadeThroughBlack } from "./sceneTransition.js";
+import { mountWhiteDoorGalleryScene } from "./whiteDoorGalleryScene.js";
+import { mountRedDoorBehindScene } from "./redDoorBehindScene.js";
+import { mountBlueDoorVoidScene } from "./blueDoorVoidScene.js";
+import { mountGreenDoorVoidScene } from "./greenDoorVoidScene.js";
+import { mountMintDoorGreenscreenScene } from "./mintDoorGreenscreenScene.js";
+import { mountPurpleDoorBehindScene } from "./purpleDoorBehindScene.js";
+import { mountPinkDoorBehindScene } from "./pinkDoorBehindScene.js";
+import { mountYellowDoorScene } from "./yellowDoorScene.js";
+import { mountCoralDoorBehindScene } from "./coralDoorBehindScene.js";
+import {
+  initYellowPortraitLayoutFromStorage,
+  mountYellowDoorPortraitLayoutPanel,
+} from "./yellowDoorPortraitLayoutPanel.js";
+import {
+  initRedSceneLayoutFromStorage,
+  mountRedDoorLayoutPanel,
+} from "./redDoorLayoutPanel.js";
+import {
+  initBlueVoidLayoutFromStorage,
+  mountBlueDoorVoidLayoutPanel,
+} from "./blueDoorVoidLayoutPanel.js";
+import {
+  initMintGreenscreenLayoutFromStorage,
+  mountMintDoorGreenscreenLayoutPanel,
+} from "./mintDoorGreenscreenLayoutPanel.js";
+import {
+  initPurpleModelLayoutFromStorage,
+  mountPurpleDoorModelLayoutPanel,
+} from "./purpleDoorModelLayoutPanel.js";
+import {
+  initMirrorHudLayoutFromStorage,
+  mountBlueMirrorHudLayoutPanel,
+} from "./blueMirrorHudLayoutPanel.js";
+import {
+  initPinkPosterLayoutFromStorage,
+  mountPinkDoorPosterLayoutPanel,
+} from "./pinkDoorPosterLayoutPanel.js";
 
 /**
  * 为什么用 NDC（归一化设备坐标）而不是直接写 world x/y？
@@ -12,6 +49,30 @@ import { runFadeThroughBlack } from "./sceneTransition.js";
  * 做法是：你按「在画面上的位置」填 ndcX/ndcY（-1~1，中心为 0），再选深度 z，
  * 用相机反投影求出该像素射线与 z=常数平面的交点，得到稳定的 world 位置。
  */
+
+mountWhiteDoorGalleryScene();
+mountRedDoorBehindScene();
+mountBlueDoorVoidScene();
+mountGreenDoorVoidScene();
+mountMintDoorGreenscreenScene();
+mountPurpleDoorBehindScene();
+mountPinkDoorBehindScene();
+mountYellowDoorScene();
+mountCoralDoorBehindScene();
+initRedSceneLayoutFromStorage();
+initBlueVoidLayoutFromStorage();
+initMintGreenscreenLayoutFromStorage();
+initMirrorHudLayoutFromStorage();
+initPurpleModelLayoutFromStorage();
+initYellowPortraitLayoutFromStorage();
+initPinkPosterLayoutFromStorage();
+mountRedDoorLayoutPanel();
+mountBlueDoorVoidLayoutPanel();
+mountMintDoorGreenscreenLayoutPanel();
+mountBlueMirrorHudLayoutPanel();
+mountPurpleDoorModelLayoutPanel();
+mountYellowDoorPortraitLayoutPanel();
+mountPinkDoorPosterLayoutPanel();
 
 const canvas = document.querySelector("#app");
 
@@ -236,6 +297,18 @@ let lastFrameTime = performance.now();
 /** 开门动画进行中或淡入淡出时禁止再次触发 */
 let sceneTransitionLocked = false;
 
+const DOOR_IDS_WITH_OVERLAY_SCENE = new Set([
+  DOOR_LABEL_TO_ID.green,
+  DOOR_LABEL_TO_ID.white,
+  DOOR_LABEL_TO_ID.yellow,
+  DOOR_LABEL_TO_ID.pink,
+  DOOR_LABEL_TO_ID.teal,
+  DOOR_LABEL_TO_ID.orange,
+  DOOR_LABEL_TO_ID.purple,
+  DOOR_LABEL_TO_ID.blue,
+  DOOR_LABEL_TO_ID.red,
+]);
+
 const DOOR_OPEN_DURATION_MS = 750;
 const DOOR_OPEN_SWING_RAD = -Math.PI / 2;
 
@@ -437,6 +510,10 @@ canvas.addEventListener("dblclick", (event) => {
     return;
   }
 
+  if (!DOOR_IDS_WITH_OVERLAY_SCENE.has(doorId)) {
+    return;
+  }
+
   const entry = doorFloatEntries.find((e) => e.mesh === door);
   if (entry) {
     entry.freezeForOpen = true;
@@ -472,6 +549,13 @@ function animate() {
     if (t >= 1) {
       const doorId = anim.doorId;
       delete mesh.userData.doorOpenAnim;
+      if (!DOOR_IDS_WITH_OVERLAY_SCENE.has(doorId)) {
+        mesh.userData.doorSwingYRad = 0;
+        const entry = doorFloatEntries.find((e) => e.mesh === mesh);
+        if (entry) entry.freezeForOpen = false;
+        syncDoorRotationFromLayoutSpec(mesh);
+        return;
+      }
       mesh.userData.doorSwingYRad = DOOR_OPEN_SWING_RAD;
       beginFadeAndSwitchScene(mesh, doorId);
     }

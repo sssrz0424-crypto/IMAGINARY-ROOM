@@ -3,6 +3,8 @@
  * 在浏览器地址后加 ?layout=1 显示；不加则默认隐藏（避免正式展示时挡画面）。
  */
 
+import { attachLayoutPanelDragResize } from "./layoutPanelDragResize.js";
+
 const LAYOUT_QUERY = "layout";
 
 export function shouldShowLayoutPanel() {
@@ -306,6 +308,8 @@ export function mountLayoutDebugPanel({
   if (first) {
     writeSpecIntoControls(first);
   }
+
+  attachLayoutPanelDragResize(root, "layoutDebug");
 
   return {
     notifyMeshLoaded(label) {
