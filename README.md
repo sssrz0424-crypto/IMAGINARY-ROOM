@@ -6,9 +6,9 @@
 
 部署成功后地址为：
 
-**https://sssrz0424-crypto.github.io/IMAGINARY-ROOM/**
+**https://sssrz0424-crypto.github.io/IMAGINARY-ROOM/docs/**
 
-（需先在 GitHub 仓库 Settings → Pages 中选择 **GitHub Actions** 作为 Source。）
+（根路径 `/IMAGINARY-ROOM/` 会自动跳转到 `docs/`。若使用 GitHub Actions 发布，也可在 Settings → Pages 中选择 **GitHub Actions**，站点将直接发布在根路径。）
 
 ## 本地运行
 
